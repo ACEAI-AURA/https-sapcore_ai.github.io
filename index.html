@@ -1,1419 +1,717 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Compass, 
-  Layers, 
-  PlayCircle, 
-  BookOpen, 
-  UserCircle2, 
-  Flame, 
-  MessageSquare, 
-  Gem, 
-  Plus,
-  ArrowUpRight,
-  TrendingUp,
-  Star, 
-  Heart,
-  X,
-  Send,
-  Image as ImageIcon,
-  Film,
-  PenTool,
-  LogOut,
-  Mail,
-  Lock,
-  User,
-  Camera,
-  UserPlus,
-  UserCheck,
-  Globe,
-  Scissors, 
-  Users,    
-  Search,   
-  Bell,
-  Edit2, 
-  Check, 
-  Sparkles,
-  Download
-} from 'lucide-react';
-
-// --- Firebase Imports ---
-import { initializeApp } from 'firebase/app';
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  getDocs, 
-  query, 
-  where 
-} from 'firebase/firestore';
-import { 
-  getAuth, 
-  signInAnonymously, 
-  onAuthStateChanged,
-  signInWithCustomToken 
-} from 'firebase/auth';
-
-// --- Firebase Configuration & Initialization ---
-const firebaseConfig = JSON.parse(__firebase_config);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// --- 다국어 번역 데이터 (SAPCORE) ---
-const TRANSLATIONS = {
-  ko: {
-    login: '로그인',
-    signup: '회원가입 완료',
-    signupLink: '회원가입하기',
-    loginLink: '로그인하기',
-    noAccount: '아직 계정이 없으신가요?',
-    hasAccount: '이미 계정이 있으신가요?',
-    emailPlace: '이메일 (E-mail)',
-    pwPlace: '비밀번호 (Password)',
-    nickPlace: '닉네임 (Nickname)',
-    loginFail: '로그인 실패: 이메일 또는 비밀번호를 확인해주세요.',
-    emailDup: '이미 가입된 이메일입니다.',
-    fillAll: '모든 항목을 입력해주세요.',
-    welcome: '환영합니다',
-    explore: '탐색',
-    nodes: '노드',
-    stories: '스토리',
-    profile: '프로필',
-    upload: '업로드',
-    logout: '로그아웃',
-    myUploads: '내 작품들',
-    createTitle: '새 작품 만들기',
-    uploadMoment: '사진 추가',
-    uploadVideo: '썸네일 업로드',
-    uploadWebtoon: '표지 업로드',
-    momentTitle: '제목을 입력하세요',
-    videoTitle: '영상 제목을 입력하세요',
-    webtoonTitle: '웹툰 제목을 입력하세요',
-    webtoonDesc: '작품의 줄거리나 설명을 적어주세요...',
-    commentPlace: '댓글 달기...',
-    follow: '팔로우',
-    following: '팔로잉',
-    loginProcessing: '처리 중...',
-    errorAuth: '인증 오류가 발생했습니다. 다시 시도해주세요.',
-    noUploads: '아직 업로드한 작품이 없습니다.',
-    chat: '채팅',
-    groupChat: '단체 채팅',
-    findGroup: '방 찾기',
-    createGroup: '방 만들기',
-    newMsg: '새 메시지',
-    editVideo: '동영상 편집',
-    applyFilter: '필터 적용',
-    groupName: '방 이름 입력',
-    join: '참여',
-    editProfile: '프로필 수정',
-    save: '저장',
-    cancel: '취소',
-    recommended: '회원님을 위한 추천',
-    interestsUpdated: '관심사가 업데이트되었습니다!',
-    exportData: '데이터 백업 (JSON)'
-  },
-  en: {
-    login: 'Log In',
-    signup: 'Sign Up',
-    signupLink: 'Sign Up',
-    loginLink: 'Log In',
-    noAccount: "Don't have an account?",
-    hasAccount: 'Already have an account?',
-    emailPlace: 'Email',
-    pwPlace: 'Password',
-    nickPlace: 'Nickname',
-    loginFail: 'Login Failed: Please check your email or password.',
-    emailDup: 'This email is already registered.',
-    fillAll: 'Please fill in all fields.',
-    welcome: 'Welcome',
-    explore: 'Explore',
-    nodes: 'Nodes',
-    stories: 'Stories',
-    profile: 'Profile',
-    upload: 'Upload',
-    logout: 'Log Out',
-    myUploads: 'My Uploads',
-    createTitle: 'Create New',
-    uploadMoment: 'Add Photo',
-    uploadVideo: 'Upload Thumb',
-    uploadWebtoon: 'Upload Cover',
-    momentTitle: 'Enter title',
-    videoTitle: 'Enter video title',
-    webtoonTitle: 'Enter webtoon title',
-    webtoonDesc: 'Enter description...',
-    commentPlace: 'Add a comment...',
-    follow: 'Follow',
-    following: 'Following',
-    loginProcessing: 'Processing...',
-    errorAuth: 'Authentication error. Please try again.',
-    noUploads: 'No uploads yet.',
-    chat: 'Chat',
-    groupChat: 'Group Chat',
-    findGroup: 'Find Group',
-    createGroup: 'Create Group',
-    newMsg: 'New Message',
-    editVideo: 'Edit Video',
-    applyFilter: 'Apply Filter',
-    groupName: 'Enter group name',
-    join: 'Join',
-    editProfile: 'Edit Profile',
-    save: 'Save',
-    cancel: 'Cancel',
-    recommended: 'Recommended for you',
-    interestsUpdated: 'Interests updated!',
-    exportData: 'Backup Data (JSON)'
-  },
-  zh: {
-    login: '登录',
-    signup: '注册完成',
-    signupLink: '注册',
-    loginLink: '登录',
-    noAccount: '还没有账号？',
-    hasAccount: '已经有账号了？',
-    emailPlace: '邮箱',
-    pwPlace: '密码',
-    nickPlace: '昵称',
-    loginFail: '登录失败：请检查邮箱或密码。',
-    emailDup: '该邮箱已被注册。',
-    fillAll: '请填写所有项目。',
-    welcome: '欢迎',
-    explore: '探索',
-    nodes: '节点',
-    stories: '故事',
-    profile: '个人资料',
-    upload: '上传',
-    logout: '登出',
-    myUploads: '我的作品',
-    createTitle: '创作新作品',
-    uploadMoment: '添加照片',
-    uploadVideo: '上传缩略图',
-    uploadWebtoon: '上传封面',
-    momentTitle: '输入标题',
-    videoTitle: '输入视频标题',
-    webtoonTitle: '输入网漫标题',
-    webtoonDesc: '请输入作品简介...',
-    commentPlace: '添加评论...',
-    follow: '关注',
-    following: '已关注',
-    loginProcessing: '处理中...',
-    errorAuth: '认证错误，请重试。',
-    noUploads: '暂无上传作品。',
-    chat: '聊天',
-    groupChat: '群聊',
-    findGroup: '查找群组',
-    createGroup: '创建群组',
-    newMsg: '新消息',
-    editVideo: '编辑视频',
-    applyFilter: '应用滤镜',
-    groupName: '输入群组名称',
-    join: '加入',
-    editProfile: '编辑资料',
-    save: '保存',
-    cancel: '取消',
-    recommended: '为您推荐',
-    interestsUpdated: '兴趣已更新！',
-    exportData: '数据备份 (JSON)'
-  },
-  es: {
-    login: 'Iniciar Sesión',
-    signup: 'Registrarse',
-    signupLink: 'Registrarse',
-    loginLink: 'Iniciar Sesión',
-    noAccount: '¿No tienes cuenta?',
-    hasAccount: '¿Ya tienes cuenta?',
-    emailPlace: 'Correo electrónico',
-    pwPlace: 'Contraseña',
-    nickPlace: 'Apodo',
-    loginFail: 'Error: Verifica tu correo o contraseña.',
-    emailDup: 'El correo ya está registrado.',
-    fillAll: 'Por favor llena todos los campos.',
-    welcome: 'Bienvenido',
-    explore: 'Explorar',
-    nodes: 'Nodos',
-    stories: 'Historias',
-    profile: 'Perfil',
-    upload: 'Subir',
-    logout: 'Cerrar sesión',
-    myUploads: 'Mis Subidas',
-    createTitle: 'Crear Nuevo',
-    uploadMoment: 'Añadir Foto',
-    uploadVideo: 'Subir Miniatura',
-    uploadWebtoon: 'Subir Portada',
-    momentTitle: 'Introduce el título',
-    videoTitle: 'Título del video',
-    webtoonTitle: 'Título del webtoon',
-    webtoonDesc: 'Introduce descripción...',
-    commentPlace: 'Añadir comentario...',
-    follow: 'Seguir',
-    following: 'Siguiendo',
-    loginProcessing: 'Procesando...',
-    errorAuth: 'Error de autenticación. Inténtalo de nuevo.',
-    noUploads: 'Aún no hay subidas.',
-    chat: 'Chat',
-    groupChat: 'Chat Grupal',
-    findGroup: 'Buscar Grupo',
-    createGroup: 'Crear Grupo',
-    newMsg: 'Nuevo Mensaje',
-    editVideo: 'Editar Video',
-    applyFilter: 'Aplicar Filtro',
-    groupName: 'Nombre del grupo',
-    join: 'Unirse',
-    editProfile: 'Editar Perfil',
-    save: 'Guardar',
-    cancel: 'Cancelar',
-    recommended: 'Recomendado para ti',
-    interestsUpdated: '¡Intereses actualizados!',
-    exportData: 'Copia de seguridad (JSON)'
-  },
-  fr: {
-    login: 'Connexion',
-    signup: "S'inscrire",
-    signupLink: "S'inscrire",
-    loginLink: 'Connexion',
-    noAccount: "Pas de compte ?",
-    hasAccount: 'Déjà un compte ?',
-    emailPlace: 'E-mail',
-    pwPlace: 'Mot de passe',
-    nickPlace: 'Surnom',
-    loginFail: 'Échec : Vérifiez votre e-mail ou mot de passe.',
-    emailDup: 'Cet e-mail est déjà enregistré.',
-    fillAll: 'Veuillez remplir tous les champs.',
-    welcome: 'Bienvenue',
-    explore: 'Explorer',
-    nodes: 'Nœuds',
-    stories: 'Histoires',
-    profile: 'Profil',
-    upload: 'Publier',
-    logout: 'Déconnexion',
-    myUploads: 'Mes publications',
-    createTitle: 'Créer Nouveau',
-    uploadMoment: 'Ajouter Photo',
-    uploadVideo: 'Miniature',
-    uploadWebtoon: 'Couverture',
-    momentTitle: 'Entrez le titre',
-    videoTitle: 'Titre de la vidéo',
-    webtoonTitle: 'Titre du webtoon',
-    webtoonDesc: 'Entrez la description...',
-    commentPlace: 'Ajouter un commentaire...',
-    follow: 'Suivre',
-    following: 'Abonné',
-    loginProcessing: 'Traitement...',
-    errorAuth: 'Erreur d\'authentification. Réessayez.',
-    noUploads: 'Pas encore de publications.',
-    chat: 'Discussion',
-    groupChat: 'Groupe',
-    findGroup: 'Trouver Groupe',
-    createGroup: 'Créer Groupe',
-    newMsg: 'Nouveau Message',
-    editVideo: 'Éditer Vidéo',
-    applyFilter: 'Appliquer Filtre',
-    groupName: 'Nom du groupe',
-    join: 'Rejoindre',
-    editProfile: 'Modifier Profil',
-    save: 'Sauvegarder',
-    cancel: 'Annuler',
-    recommended: 'Recommandé pour vous',
-    interestsUpdated: 'Intérêts mis à jour !',
-    exportData: 'Sauvegarde (JSON)'
-  },
-  ja: {
-    login: 'ログイン',
-    signup: '登録完了',
-    signupLink: '新規登録',
-    loginLink: 'ログイン',
-    noAccount: 'アカウントをお持ちでないですか？',
-    hasAccount: 'すでにアカウントをお持ちですか？',
-    emailPlace: 'メールアドレス',
-    pwPlace: 'パスワード',
-    nickPlace: 'ニックネーム',
-    loginFail: 'ログイン失敗：メールまたはパスワードを確認してください。',
-    emailDup: 'このメールは既に登録されています。',
-    fillAll: 'すべての項目を入力してください。',
-    welcome: 'ようこそ',
-    explore: '探索',
-    nodes: 'ノード',
-    stories: 'ストーリー',
-    profile: 'プロフィール',
-    upload: 'アップロード',
-    logout: 'ログアウト',
-    myUploads: '私の作品',
-    createTitle: '新規作成',
-    uploadMoment: '写真追加',
-    uploadVideo: 'サムネイル',
-    uploadWebtoon: '表紙アップロード',
-    momentTitle: 'タイトルを入力',
-    videoTitle: '動画タイトル',
-    webtoonTitle: 'ウェブトゥーンのタイトル',
-    webtoonDesc: '説明を入力...',
-    commentPlace: 'コメントを追加...',
-    follow: 'フォロー',
-    following: 'フォロー中',
-    loginProcessing: '処理中...',
-    errorAuth: '認証エラーが発生しました。再試行してください。',
-    noUploads: 'まだアップロードされた作品はありません。',
-    chat: 'チャット',
-    groupChat: 'グループチャット',
-    findGroup: 'グループを探す',
-    createGroup: 'グループ作成',
-    newMsg: '新しいメッセージ',
-    editVideo: '動画編集',
-    applyFilter: 'フィルター適用',
-    groupName: 'グループ名を入力',
-    join: '参加',
-    editProfile: 'プロフィール編集',
-    save: '保存',
-    cancel: 'キャンセル',
-    recommended: 'あなたへのおすすめ',
-    interestsUpdated: '興味が更新されました！',
-    exportData: 'データバックアップ (JSON)'
-  }
-};
-
-// --- 초기 데이터 ---
-const INITIAL_POSTS = [
-  {
-    id: 1,
-    category: 'Moment',
-    author: 'Sapcore_Creator',
-    authorAvatar: 'https://i.pravatar.cc/100?u=Sapcore_Creator',
-    title: '미래의 소셜 미디어는 어떤 모습일까요?',
-    preview: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
-    stats: { engagement: '98%', interactions: '2.4k' },
-    tags: ['design', 'future', 'tech']
-  },
-  {
-    id: 2,
-    category: 'Concept',
-    author: 'Tech_Flow',
-    authorAvatar: 'https://i.pravatar.cc/100?u=Tech_Flow',
-    title: 'SAPCORE 디자인 시스템 가이드라인',
-    preview: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800',
-    stats: { engagement: '85%', interactions: '1.1k' },
-    tags: ['ui/ux', 'design', 'system']
-  }
-];
-
-const INITIAL_COMMENTS = {
-  1: [
-    { id: 101, user: 'DesignLover', text: '정말 기대되는 비전이네요! 😎', avatar: 'https://i.pravatar.cc/150?u=DesignLover' },
-    { id: 102, user: 'Future_Dev', text: '빨리 써보고 싶습니다.', avatar: 'https://i.pravatar.cc/150?u=Future_Dev' }
-  ]
-};
-
-const INITIAL_VIDEOS = [
-  { id: 1, title: 'Generative Art Motion', author: 'Visual_X', views: '1.5M', thumb: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600', tags: ['art', 'motion', 'design'] },
-  { id: 2, title: 'Neon Night Cityscape', author: 'CyberRunner', views: '890K', thumb: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600', tags: ['cyberpunk', 'city', 'future'] }
-];
-
-const INITIAL_WEBTOONS = [
-  { id: 1, title: '침묵의 궤도', desc: '우주를 여행하는 고독한 항해일지', score: '9.9', author: '루나', img: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=400', tags: ['space', 'sci-fi'] },
-  { id: 2, title: '네온 신드롬', desc: '사이버펑크 도시의 미스터리', score: '9.8', author: '제이', img: 'https://images.unsplash.com/photo-1541562232579-512a21359920?w=400', tags: ['cyberpunk', 'mystery'] }
-];
-
-const INITIAL_CHAT_GROUPS = [
-  { id: 1, name: 'Webtoon Artists', members: 124, lastMsg: '새로운 챕터 언제 나오나요?' },
-  { id: 2, name: 'Video Creators', members: 89, lastMsg: '이번 편집 효과 대박이네요' },
-  { id: 3, name: 'Global Friends', members: 350, lastMsg: 'Hello everyone!' }
-];
-
-// --- 메인 앱 컴포넌트 ---
-const App = () => {
-  const [firebaseUser, setFirebaseUser] = useState(null); 
-  const [currentUser, setCurrentUser] = useState(null); 
-  const [isLoading, setIsLoading] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [language, setLanguage] = useState('ko'); 
-  const t = TRANSLATIONS[language]; 
-
-  const [activeTab, setActiveTab] = useState('explore');
-  const [liked, setLiked] = useState({});
-  const [posts, setPosts] = useState(INITIAL_POSTS);
-  const [videos, setVideos] = useState(INITIAL_VIDEOS);
-  const [webtoons, setWebtoons] = useState(INITIAL_WEBTOONS);
-  const [followingList, setFollowingList] = useState([]); 
-  const [commentsData, setCommentsData] = useState(INITIAL_COMMENTS); 
-  const [activePostForComments, setActivePostForComments] = useState(null); 
-  const [commentInput, setCommentInput] = useState(''); 
-
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [chatGroups, setChatGroups] = useState(INITIAL_CHAT_GROUPS); 
-  const [publicGroups, setPublicGroups] = useState([
-     { id: 101, name: 'K-Pop Fans', members: 500, desc: 'BTS, Blackpink...' },
-     { id: 102, name: 'Coding Study', members: 42, desc: 'React & Firebase' }
-  ]); 
-  const [activeChatTab, setActiveChatTab] = useState('my'); 
-  const [newGroupName, setNewGroupName] = useState('');
-  const [notification, setNotification] = useState(null); 
-
-  const [showCompose, setShowCompose] = useState(false);
-  const [uploadType, setUploadType] = useState('moment');
-  const [inputText, setInputText] = useState('');
-  const [inputDesc, setInputDesc] = useState('');
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [isEditingVideo, setIsEditingVideo] = useState(false); 
-  const [videoFilter, setVideoFilter] = useState(''); 
-
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editNameInput, setEditNameInput] = useState('');
-  const [userInterests, setUserInterests] = useState([]);
-
-  const [authMode, setAuthMode] = useState('login');
-  const [authForm, setAuthForm] = useState({ email: '', password: '', nickname: '', avatar: null });
-
-  useEffect(() => {
-    if (currentUser) {
-      const timer = setTimeout(() => {
-        setNotification({
-          id: Date.now(),
-          title: t.newMsg,
-          message: 'Webtoon Artists: 안녕하세요!',
-          icon: MessageSquare
-        });
-        setTimeout(() => setNotification(null), 3000);
-      }, 5000); 
-      return () => clearTimeout(timer);
-    }
-  }, [currentUser, t.newMsg]);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
-      }
-    };
-    initAuth();
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPCORE - Sapphire AI Core Universe</title>
     
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleExportData = () => {
-    if (!currentUser) return;
-
-    const exportData = {
-      userProfile: currentUser,
-      myPosts: posts.filter(p => p.author === currentUser.nickname),
-      myVideos: videos.filter(v => v.author === currentUser.nickname),
-      myWebtoons: webtoons.filter(w => w.author === currentUser.nickname),
-      following: followingList,
-      interests: userInterests,
-      exportedAt: new Date().toISOString(),
-      appVersion: 'Sapcore 1.0'
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sapcore_backup_${currentUser.nickname}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const getRecommendationScore = (tags) => {
-    if (!tags || tags.length === 0) return 0;
-    const matches = tags.filter(tag => userInterests.includes(tag));
-    return matches.length;
-  };
-
-  const handleImageChange = (e, setUrlFunc) => {
-    const file = e.target.files[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setUrlFunc(url);
-    }
-  };
-
-  const toggleFollow = (authorName) => {
-    if (authorName === currentUser.nickname) return; 
-
-    if (followingList.includes(authorName)) {
-      setFollowingList(followingList.filter(name => name !== authorName)); 
-    } else {
-      setFollowingList([...followingList, authorName]); 
-    }
-  };
-
-  const handleLike = (id, tags) => {
-    setLiked(prev => ({...prev, [id]: !prev[id]}));
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    if (tags && tags.length > 0) {
-      const newInterests = [...new Set([...userInterests, ...tags])];
-      setUserInterests(newInterests);
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Import Map for React & Lucide -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0"
+        }
     }
-  };
+    </script>
 
-  const handleCommentSubmit = () => {
-    if (!commentInput.trim() || !activePostForComments) return;
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    const newComment = {
-      id: Date.now(),
-      user: currentUser.nickname,
-      avatar: currentUser.avatar,
-      text: commentInput
-    };
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar { -ms-overflow-style: none;  scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-[#F8F9FA]">
+    <div id="root"></div>
 
-    setCommentsData(prev => ({
-      ...prev,
-      [activePostForComments]: [...(prev[activePostForComments] || []), newComment]
-    }));
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Compass, Layers, PlayCircle, BookOpen, UserCircle2, Flame, 
+            MessageSquare, Gem, Plus, ArrowUpRight, TrendingUp, Star, 
+            Heart, X, Send, Image as ImageIcon, Film, PenTool, LogOut, 
+            Mail, Lock, User, Camera, UserPlus, UserCheck, Globe, 
+            Scissors, Users, Search, Bell, Edit2, Check, Sparkles, Download 
+        } from 'lucide-react';
 
-    setCommentInput('');
-  };
+        // --- Firebase Imports ---
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+        import { 
+            getFirestore, collection, addDoc, getDocs, query, where 
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+        import { 
+            getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken 
+        } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-  const handleCreateGroup = () => {
-    if (!newGroupName.trim()) return;
-    const newGroup = {
-      id: Date.now(),
-      name: newGroupName,
-      members: 1,
-      lastMsg: '새로운 채팅방이 생성되었습니다.'
-    };
-    setChatGroups([newGroup, ...chatGroups]);
-    setNewGroupName('');
-  };
+        // --- Firebase Configuration & Initialization ---
+        // 주의: 로컬 파일로 실행 시 __firebase_config가 없을 수 있으므로 예외 처리
+        let app, auth, db;
+        let appId = 'default-app-id';
 
-  const handleJoinGroup = (group) => {
-    const exists = chatGroups.find(g => g.id === group.id);
-    if (!exists) {
-      setChatGroups([{ ...group, lastMsg: '참여했습니다.' }, ...chatGroups]);
-      alert(`${group.name} ${t.join} 완료!`);
-    } else {
-      alert('이미 참여 중인 방입니다.');
-    }
-  };
-
-  const handleNameUpdate = () => {
-    if (editNameInput.trim()) {
-      setCurrentUser(prev => ({ ...prev, nickname: editNameInput }));
-      setIsEditingProfile(false);
-    }
-  };
-
-  const handleAuthSubmit = async (e) => {
-    e.preventDefault();
-    setLoginError(''); 
-    if (!firebaseUser) return;
-
-    setIsLoading(true);
-    const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'aura_users');
-
-    try {
-      if (authMode === 'signup') {
-        if (!authForm.email || !authForm.password || !authForm.nickname) {
-          setLoginError(t.fillAll);
-          setIsLoading(false);
-          return;
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' 
+                ? JSON.parse(__firebase_config) 
+                : { 
+                    // 로컬 실행용 더미 설정 (실제 사용시 본인의 Firebase 키로 교체 필요)
+                    apiKey: "YOUR_API_KEY",
+                    authDomain: "your-project.firebaseapp.com",
+                    projectId: "your-project-id",
+                    storageBucket: "your-project.appspot.com",
+                    messagingSenderId: "00000000000",
+                    appId: "1:00000000000:web:00000000000000" 
+                  };
+            
+            // 키가 없는 경우 초기화 방지
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'sapcore-web-app';
+            }
+        } catch (e) {
+            console.warn("Firebase initialization failed. Features requiring DB will utilize local state only.");
         }
 
-        const q = query(usersRef, where("email", "==", authForm.email));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          setLoginError(t.emailDup);
-          setIsLoading(false);
-          return;
-        }
-
-        const newUser = {
-          email: authForm.email,
-          password: authForm.password, 
-          nickname: authForm.nickname,
-          avatar: authForm.avatar || `https://i.pravatar.cc/150?u=${authForm.email}`,
-          stats: { works: 0, level: 1 }
+        // --- Translation Data ---
+        const TRANSLATIONS = {
+            ko: {
+                login: '로그인', signup: '회원가입 완료', signupLink: '회원가입하기', loginLink: '로그인하기',
+                noAccount: '아직 계정이 없으신가요?', hasAccount: '이미 계정이 있으신가요?',
+                emailPlace: '이메일 (E-mail)', pwPlace: '비밀번호 (Password)', nickPlace: '닉네임 (Nickname)',
+                loginFail: '로그인 실패: 이메일 또는 비밀번호를 확인해주세요.', emailDup: '이미 가입된 이메일입니다.',
+                fillAll: '모든 항목을 입력해주세요.', welcome: '환영합니다', explore: '탐색', nodes: '노드',
+                stories: '스토리', profile: '프로필', upload: '업로드', logout: '로그아웃', myUploads: '내 작품들',
+                createTitle: '새 작품 만들기', uploadMoment: '사진 추가', uploadVideo: '썸네일 업로드',
+                uploadWebtoon: '표지 업로드', momentTitle: '제목을 입력하세요', videoTitle: '영상 제목을 입력하세요',
+                webtoonTitle: '웹툰 제목을 입력하세요', webtoonDesc: '작품의 줄거리나 설명을 적어주세요...',
+                commentPlace: '댓글 달기...', follow: '팔로우', following: '팔로잉', loginProcessing: '처리 중...',
+                errorAuth: '인증 오류가 발생했습니다. 다시 시도해주세요.', noUploads: '아직 업로드한 작품이 없습니다.',
+                chat: '채팅', groupChat: '단체 채팅', findGroup: '방 찾기', createGroup: '방 만들기',
+                newMsg: '새 메시지', editVideo: '동영상 편집', applyFilter: '필터 적용', groupName: '방 이름 입력',
+                join: '참여', editProfile: '프로필 수정', save: '저장', cancel: '취소',
+                recommended: '회원님을 위한 추천', interestsUpdated: '관심사가 업데이트되었습니다!',
+                exportData: '데이터 백업 (JSON)'
+            },
+            en: {
+                login: 'Log In', signup: 'Sign Up', signupLink: 'Sign Up', loginLink: 'Log In',
+                noAccount: "Don't have an account?", hasAccount: 'Already have an account?',
+                emailPlace: 'Email', pwPlace: 'Password', nickPlace: 'Nickname',
+                loginFail: 'Login Failed: Please check your email or password.', emailDup: 'This email is already registered.',
+                fillAll: 'Please fill in all fields.', welcome: 'Welcome', explore: 'Explore', nodes: 'Nodes',
+                stories: 'Stories', profile: 'Profile', upload: 'Upload', logout: 'Log Out', myUploads: 'My Uploads',
+                createTitle: 'Create New', uploadMoment: 'Add Photo', uploadVideo: 'Upload Thumb',
+                uploadWebtoon: 'Upload Cover', momentTitle: 'Enter title', videoTitle: 'Enter video title',
+                webtoonTitle: 'Enter webtoon title', webtoonDesc: 'Enter description...',
+                commentPlace: 'Add a comment...', follow: 'Follow', following: 'Following',
+                loginProcessing: 'Processing...', errorAuth: 'Authentication error. Please try again.',
+                noUploads: 'No uploads yet.', chat: 'Chat', groupChat: 'Group Chat', findGroup: 'Find Group',
+                createGroup: 'Create Group', newMsg: 'New Message', editVideo: 'Edit Video', applyFilter: 'Apply Filter',
+                groupName: 'Enter group name', join: 'Join', editProfile: 'Edit Profile', save: 'Save', cancel: 'Cancel',
+                recommended: 'Recommended for you', interestsUpdated: 'Interests updated!', exportData: 'Backup Data (JSON)'
+            },
+            zh: {
+                login: '登录', signup: '注册完成', signupLink: '注册', loginLink: '登录',
+                noAccount: '还没有账号？', hasAccount: '已经有账号了？',
+                emailPlace: '邮箱', pwPlace: '密码', nickPlace: '昵称',
+                loginFail: '登录失败：请检查邮箱或密码。', emailDup: '该邮箱已被注册。',
+                fillAll: '请填写所有项目。', welcome: '欢迎', explore: '探索', nodes: '节点',
+                stories: '故事', profile: '个人资料', upload: '上传', logout: '登出', myUploads: '我的作品',
+                createTitle: '创作新作品', uploadMoment: '添加照片', uploadVideo: '上传缩略图',
+                uploadWebtoon: '上传封面', momentTitle: '输入标题', videoTitle: '输入视频标题',
+                webtoonTitle: '输入网漫标题', webtoonDesc: '请输入作品简介...',
+                commentPlace: '添加评论...', follow: '关注', following: '已关注',
+                loginProcessing: '处理中...', errorAuth: '认证错误，请重试。', noUploads: '暂无上传作品。',
+                chat: '聊天', groupChat: '群聊', findGroup: '查找群组', createGroup: '创建群组',
+                newMsg: '新消息', editVideo: '编辑视频', applyFilter: '应用滤镜', groupName: '输入群组名称',
+                join: '加入', editProfile: '编辑资料', save: '保存', cancel: '取消',
+                recommended: '为您推荐', interestsUpdated: '兴趣已更新！', exportData: '数据备份 (JSON)'
+            },
+            es: {
+                login: 'Iniciar Sesión', signup: 'Registrarse', signupLink: 'Registrarse', loginLink: 'Iniciar Sesión',
+                noAccount: '¿No tienes cuenta?', hasAccount: '¿Ya tienes cuenta?',
+                emailPlace: 'Correo electrónico', pwPlace: 'Contraseña', nickPlace: 'Apodo',
+                loginFail: 'Error: Verifica tu correo o contraseña.', emailDup: 'El correo ya está registrado.',
+                fillAll: 'Por favor llena todos los campos.', welcome: 'Bienvenido', explore: 'Explorar', nodes: 'Nodos',
+                stories: 'Historias', profile: 'Perfil', upload: 'Subir', logout: 'Cerrar sesión', myUploads: 'Mis Subidas',
+                createTitle: 'Crear Nuevo', uploadMoment: 'Añadir Foto', uploadVideo: 'Subir Miniatura',
+                uploadWebtoon: 'Subir Portada', momentTitle: 'Introduce el título', videoTitle: 'Título del video',
+                webtoonTitle: 'Título del webtoon', webtoonDesc: 'Introduce descripción...',
+                commentPlace: 'Añadir comentario...', follow: 'Seguir', following: 'Siguiendo',
+                loginProcessing: 'Procesando...', errorAuth: 'Error de autenticación. Inténtalo de nuevo.',
+                noUploads: 'Aún no hay subidas.', chat: 'Chat', groupChat: 'Chat Grupal', findGroup: 'Buscar Grupo',
+                createGroup: 'Crear Grupo', newMsg: 'Nuevo Mensaje', editVideo: 'Editar Video', applyFilter: 'Aplicar Filtro',
+                groupName: 'Nombre del grupo', join: 'Unirse', editProfile: 'Editar Perfil', save: 'Guardar', cancel: 'Cancelar',
+                recommended: 'Recomendado para ti', interestsUpdated: '¡Intereses actualizados!', exportData: 'Copia de seguridad (JSON)'
+            },
+            fr: {
+                login: 'Connexion', signup: "S'inscrire", signupLink: "S'inscrire", loginLink: 'Connexion',
+                noAccount: "Pas de compte ?", hasAccount: 'Déjà un compte ?',
+                emailPlace: 'E-mail', pwPlace: 'Mot de passe', nickPlace: 'Surnom',
+                loginFail: 'Échec : Vérifiez votre e-mail ou mot de passe.', emailDup: 'Cet e-mail est déjà enregistré.',
+                fillAll: 'Veuillez remplir tous les champs.', welcome: 'Bienvenue', explore: 'Explorer', nodes: 'Nœuds',
+                stories: 'Histoires', profile: 'Profil', upload: 'Publier', logout: 'Déconnexion', myUploads: 'Mes publications',
+                createTitle: 'Créer Nouveau', uploadMoment: 'Ajouter Photo', uploadVideo: 'Miniature',
+                uploadWebtoon: 'Couverture', momentTitle: 'Entrez le titre', videoTitle: 'Titre de la vidéo',
+                webtoonTitle: 'Titre du webtoon', webtoonDesc: 'Entrez la description...',
+                commentPlace: 'Ajouter un commentaire...', follow: 'Suivre', following: 'Abonné',
+                loginProcessing: 'Traitement...', errorAuth: 'Erreur d\'authentification. Réessayez.',
+                noUploads: 'Pas encore de publications.', chat: 'Discussion', groupChat: 'Groupe', findGroup: 'Trouver Groupe',
+                createGroup: 'Créer Groupe', newMsg: 'Nouveau Message', editVideo: 'Éditer Vidéo', applyFilter: 'Appliquer Filtre',
+                groupName: 'Nom du groupe', join: 'Rejoindre', editProfile: 'Modifier Profil', save: 'Sauvegarder', cancel: 'Annuler',
+                recommended: 'Recommandé pour vous', interestsUpdated: 'Intérêts mis à jour !', exportData: 'Sauvegarde (JSON)'
+            },
+            ja: {
+                login: 'ログイン', signup: '登録完了', signupLink: '新規登録', loginLink: 'ログイン',
+                noAccount: 'アカウントをお持ちでないですか？', hasAccount: 'すでにアカウントをお持ちですか？',
+                emailPlace: 'メールアドレス', pwPlace: 'パスワード', nickPlace: 'ニックネーム',
+                loginFail: 'ログイン失敗：メールまたはパスワードを確認してください。', emailDup: 'このメールは既に登録されています。',
+                fillAll: 'すべての項目を入力してください。', welcome: 'ようこそ', explore: '探索', nodes: 'ノード',
+                stories: 'ストーリー', profile: 'プロフィール', upload: 'アップロード', logout: 'ログアウト', myUploads: '私の作品',
+                createTitle: '新規作成', uploadMoment: '写真追加', uploadVideo: 'サムネイル',
+                uploadWebtoon: '表紙アップロード', momentTitle: 'タイトルを入力', videoTitle: '動画タイトル',
+                webtoonTitle: 'ウェブトゥーンのタイトル', webtoonDesc: '説明を入力...',
+                commentPlace: 'コメントを追加...', follow: 'フォロー', following: 'フォロー中',
+                loginProcessing: '処理中...', errorAuth: '認証エラーが発生しました。再試行してください。',
+                noUploads: 'まだアップロードされた作品はありません。', chat: 'チャット', groupChat: 'グループチャット', findGroup: 'グループを探す',
+                createGroup: 'グループ作成', newMsg: '新しいメッセージ', editVideo: '動画編集', applyFilter: 'フィルター適用',
+                groupName: 'グループ名を入力', join: '参加', editProfile: 'プロフィール編集', save: '保存', cancel: 'キャンセル',
+                recommended: 'あなたへのおすすめ', interestsUpdated: '興味が更新されました！', exportData: 'データバックアップ (JSON)'
+            }
         };
 
-        await addDoc(usersRef, newUser);
-        setCurrentUser(newUser);
-        setFollowingList([]);
+        // --- Mock Data ---
+        const INITIAL_POSTS = [
+            { id: 1, category: 'Moment', author: 'Sapcore_Creator', authorAvatar: 'https://i.pravatar.cc/100?u=Sapcore_Creator', title: '미래의 소셜 미디어는 어떤 모습일까요?', preview: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800', stats: { engagement: '98%', interactions: '2.4k' }, tags: ['design', 'future', 'tech'] },
+            { id: 2, category: 'Concept', author: 'Tech_Flow', authorAvatar: 'https://i.pravatar.cc/100?u=Tech_Flow', title: 'SAPCORE 디자인 시스템 가이드라인', preview: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800', stats: { engagement: '85%', interactions: '1.1k' }, tags: ['ui/ux', 'design', 'system'] }
+        ];
+        const INITIAL_COMMENTS = {
+            1: [ { id: 101, user: 'DesignLover', text: '정말 기대되는 비전이네요! 😎', avatar: 'https://i.pravatar.cc/150?u=DesignLover' }, { id: 102, user: 'Future_Dev', text: '빨리 써보고 싶습니다.', avatar: 'https://i.pravatar.cc/150?u=Future_Dev' } ]
+        };
+        const INITIAL_VIDEOS = [
+            { id: 1, title: 'Generative Art Motion', author: 'Visual_X', views: '1.5M', thumb: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600', tags: ['art', 'motion', 'design'] },
+            { id: 2, title: 'Neon Night Cityscape', author: 'CyberRunner', views: '890K', thumb: 'https://images.unsplash.com/photo-1519608487953-e999c86e7455?w=600', tags: ['cyberpunk', 'city', 'future'] }
+        ];
+        const INITIAL_WEBTOONS = [
+            { id: 1, title: '침묵의 궤도', desc: '우주를 여행하는 고독한 항해일지', score: '9.9', author: '루나', img: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=400', tags: ['space', 'sci-fi'] },
+            { id: 2, title: '네온 신드롬', desc: '사이버펑크 도시의 미스터리', score: '9.8', author: '제이', img: 'https://images.unsplash.com/photo-1541562232579-512a21359920?w=400', tags: ['cyberpunk', 'mystery'] }
+        ];
+        const INITIAL_CHAT_GROUPS = [
+            { id: 1, name: 'Webtoon Artists', members: 124, lastMsg: '새로운 챕터 언제 나오나요?' },
+            { id: 2, name: 'Video Creators', members: 89, lastMsg: '이번 편집 효과 대박이네요' },
+            { id: 3, name: 'Global Friends', members: 350, lastMsg: 'Hello everyone!' }
+        ];
 
-      } else {
-        const q = query(usersRef, where("email", "==", authForm.email));
-        const querySnapshot = await getDocs(q);
+        // --- App Component ---
+        const App = () => {
+            const [firebaseUser, setFirebaseUser] = useState(null);
+            const [currentUser, setCurrentUser] = useState(null);
+            const [isLoading, setIsLoading] = useState(false);
+            const [loginError, setLoginError] = useState('');
+            const [language, setLanguage] = useState('ko');
+            const t = TRANSLATIONS[language];
 
-        if (querySnapshot.empty) {
-           setLoginError(t.loginFail); 
-           setIsLoading(false);
-           return;
-        }
+            const [activeTab, setActiveTab] = useState('explore');
+            const [liked, setLiked] = useState({});
+            const [posts, setPosts] = useState(INITIAL_POSTS);
+            const [videos, setVideos] = useState(INITIAL_VIDEOS);
+            const [webtoons, setWebtoons] = useState(INITIAL_WEBTOONS);
+            const [followingList, setFollowingList] = useState([]);
+            const [commentsData, setCommentsData] = useState(INITIAL_COMMENTS);
+            const [activePostForComments, setActivePostForComments] = useState(null);
+            const [commentInput, setCommentInput] = useState('');
 
-        let foundUser = null;
-        querySnapshot.forEach((doc) => {
-           const userData = doc.data();
-           if (userData.password === authForm.password) {
-             foundUser = userData;
-           }
-        });
+            const [showChatModal, setShowChatModal] = useState(false);
+            const [chatGroups, setChatGroups] = useState(INITIAL_CHAT_GROUPS);
+            const [publicGroups, setPublicGroups] = useState([
+                { id: 101, name: 'K-Pop Fans', members: 500, desc: 'BTS, Blackpink...' },
+                { id: 102, name: 'Coding Study', members: 42, desc: 'React & Firebase' }
+            ]);
+            const [activeChatTab, setActiveChatTab] = useState('my');
+            const [newGroupName, setNewGroupName] = useState('');
+            const [notification, setNotification] = useState(null);
 
-        if (foundUser) {
-          setCurrentUser(foundUser);
-          setFollowingList([]); 
-        } else {
-          setLoginError(t.loginFail); 
-        }
-      }
-    } catch (error) {
-      console.error("Auth Error:", error);
-      setLoginError(t.errorAuth);
-    }
+            const [showCompose, setShowCompose] = useState(false);
+            const [uploadType, setUploadType] = useState('moment');
+            const [inputText, setInputText] = useState('');
+            const [inputDesc, setInputDesc] = useState('');
+            const [previewUrl, setPreviewUrl] = useState(null);
+            const [isEditingVideo, setIsEditingVideo] = useState(false);
+            const [videoFilter, setVideoFilter] = useState('');
 
-    setIsLoading(false);
-  };
+            const [isEditingProfile, setIsEditingProfile] = useState(false);
+            const [editNameInput, setEditNameInput] = useState('');
+            const [userInterests, setUserInterests] = useState([]);
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setAuthForm({ email: '', password: '', nickname: '', avatar: null });
-    setActiveTab('explore');
-    setFollowingList([]);
-    setLoginError('');
-    setUserInterests([]); 
-  };
+            const [authMode, setAuthMode] = useState('login');
+            const [authForm, setAuthForm] = useState({ email: '', password: '', nickname: '', avatar: null });
 
-  const handleSubmit = () => {
-    if (!inputText.trim()) return;
+            // Notification Sim
+            useEffect(() => {
+                if (currentUser) {
+                    const timer = setTimeout(() => {
+                        setNotification({
+                            id: Date.now(),
+                            title: t.newMsg,
+                            message: 'Webtoon Artists: 안녕하세요!',
+                            icon: MessageSquare
+                        });
+                        setTimeout(() => setNotification(null), 3000);
+                    }, 5000);
+                    return () => clearTimeout(timer);
+                }
+            }, [currentUser, t.newMsg]);
 
-    const commonData = {
-      id: Date.now(),
-      author: currentUser.nickname,
-      authorAvatar: currentUser.avatar,
-      isNew: true,
-      tags: ['new', 'user_content'] 
-    };
+            // Firebase Auth
+            useEffect(() => {
+                if (!auth) return;
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+                initAuth();
+                
+                const unsubscribe = onAuthStateChanged(auth, (user) => {
+                    setFirebaseUser(user);
+                });
+                return () => unsubscribe();
+            }, []);
 
-    const imageToUse = previewUrl || `https://picsum.photos/seed/${Date.now()}/800/600`;
+            // Handlers
+            const handleExportData = () => {
+                if (!currentUser) return;
+                const exportData = {
+                    userProfile: currentUser,
+                    myPosts: posts.filter(p => p.author === currentUser.nickname),
+                    myVideos: videos.filter(v => v.author === currentUser.nickname),
+                    myWebtoons: webtoons.filter(w => w.author === currentUser.nickname),
+                    following: followingList,
+                    interests: userInterests,
+                    exportedAt: new Date().toISOString(),
+                    appVersion: 'Sapcore 1.0'
+                };
+                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `sapcore_backup_${currentUser.nickname}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            };
 
-    if (uploadType === 'moment') {
-      const newPost = {
-        ...commonData,
-        category: 'My Moment',
-        title: inputText,
-        preview: imageToUse,
-        stats: { engagement: 'New', interactions: '0' },
-      };
-      setPosts([newPost, ...posts]);
-      setActiveTab('explore');
-    } else if (uploadType === 'video') {
-      const newVideo = {
-        ...commonData,
-        title: inputText,
-        thumb: imageToUse,
-        views: '0',
-        author: currentUser.nickname,
-        filter: videoFilter 
-      };
-      setVideos([newVideo, ...videos]);
-      setActiveTab('nodes');
-    } else if (uploadType === 'webtoon') {
-      const newWebtoon = {
-        ...commonData,
-        title: inputText,
-        desc: inputDesc || '작품 설명이 없습니다.',
-        img: imageToUse,
-        score: '10.0',
-        author: currentUser.nickname
-      };
-      setWebtoons([newWebtoon, ...webtoons]);
-      setActiveTab('stories');
-    }
+            const getRecommendationScore = (tags) => {
+                if (!tags || tags.length === 0) return 0;
+                const matches = tags.filter(tag => userInterests.includes(tag));
+                return matches.length;
+            };
 
-    const updatedUser = { ...currentUser, stats: { ...currentUser.stats, works: currentUser.stats.works + 1 } };
-    setCurrentUser(updatedUser);
-    
-    setInputText('');
-    setInputDesc('');
-    setPreviewUrl(null);
-    setShowCompose(false);
-    setIsEditingVideo(false);
-    setVideoFilter('');
-  };
+            const handleImageChange = (e, setUrlFunc) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const url = URL.createObjectURL(file);
+                    setUrlFunc(url);
+                }
+            };
 
-  if (!currentUser) {
-    return (
-      <div className="max-w-md mx-auto min-h-screen bg-white flex flex-col items-center justify-center p-8 relative overflow-hidden font-sans">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-purple-200 rounded-full blur-[100px] opacity-50"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-blue-200 rounded-full blur-[100px] opacity-50"></div>
+            const toggleFollow = (authorName) => {
+                if (authorName === currentUser.nickname) return;
+                if (followingList.includes(authorName)) {
+                    setFollowingList(followingList.filter(name => name !== authorName));
+                } else {
+                    setFollowingList([...followingList, authorName]);
+                }
+            };
 
-        <div className="z-10 w-full relative">
-          <div className="flex justify-center gap-3 mb-8">
-             {['ko', 'en', 'es', 'fr', 'ja', 'zh'].map(lang => (
-               <button 
-                 key={lang} 
-                 onClick={() => setLanguage(lang)}
-                 className={`w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold uppercase transition-all ${language === lang ? 'bg-black text-white border-black scale-110 shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'}`}
-               >
-                 {lang}
-               </button>
-             ))}
-          </div>
+            const handleLike = (id, tags) => {
+                setLiked(prev => ({...prev, [id]: !prev[id]}));
+                if (tags && tags.length > 0) {
+                    const newInterests = [...new Set([...userInterests, ...tags])];
+                    setUserInterests(newInterests);
+                }
+            };
 
-          <div className="flex flex-col items-center mb-10">
-            <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center rotate-12 shadow-2xl mb-4">
-              <Gem size={32} className="text-white fill-white" />
-            </div>
-            <h1 className="text-4xl font-black tracking-tighter italic">SAPCORE</h1>
-            <p className="text-gray-400 font-medium mt-2">Sapphire AI Core Universe</p>
-          </div>
+            const handleCommentSubmit = () => {
+                if (!commentInput.trim() || !activePostForComments) return;
+                const newComment = {
+                    id: Date.now(), user: currentUser.nickname, avatar: currentUser.avatar, text: commentInput
+                };
+                setCommentsData(prev => ({
+                    ...prev, [activePostForComments]: [...(prev[activePostForComments] || []), newComment]
+                }));
+                setCommentInput('');
+            };
 
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
-            {authMode === 'signup' && (
-              <div className="animate-in slide-in-from-bottom-5 duration-300 space-y-4">
-                 <div className="flex justify-center mb-6">
-                    <label className="relative cursor-pointer group">
-                       <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden hover:border-black transition-colors">
-                          {authForm.avatar ? (
-                            <img src={authForm.avatar} alt="profile" className="w-full h-full object-cover" />
-                          ) : (
-                            <Camera className="text-gray-400" />
-                          )}
-                       </div>
-                       <div className="absolute bottom-0 right-0 bg-black text-white p-1.5 rounded-full shadow-lg">
-                         <Plus size={12} />
-                       </div>
-                       <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, (url) => setAuthForm({...authForm, avatar: url}))} />
-                    </label>
-                 </div>
-                 <div className="relative">
-                  <User className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                  <input 
-                    type="text" 
-                    placeholder={t.nickPlace}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
-                    value={authForm.nickname}
-                    onChange={(e) => setAuthForm({...authForm, nickname: e.target.value})}
-                  />
-                </div>
-              </div>
-            )}
+            const handleCreateGroup = () => {
+                if (!newGroupName.trim()) return;
+                const newGroup = { id: Date.now(), name: newGroupName, members: 1, lastMsg: 'New group created.' };
+                setChatGroups([newGroup, ...chatGroups]);
+                setNewGroupName('');
+            };
 
-            <div className="relative">
-              <Mail className="absolute left-4 top-3.5 text-gray-400" size={20} />
-              <input 
-                type="email" 
-                placeholder={t.emailPlace}
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
-                value={authForm.email}
-                onChange={(e) => setAuthForm({...authForm, email: e.target.value})}
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
-              <input 
-                type="password" 
-                placeholder={t.pwPlace}
-                className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
-                value={authForm.password}
-                onChange={(e) => setAuthForm({...authForm, password: e.target.value})}
-              />
-            </div>
+            const handleJoinGroup = (group) => {
+                const exists = chatGroups.find(g => g.id === group.id);
+                if (!exists) {
+                    setChatGroups([{ ...group, lastMsg: 'Joined.' }, ...chatGroups]);
+                    alert(`${group.name} Joined!`);
+                } else {
+                    alert('Already joined.');
+                }
+            };
 
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="w-full bg-black text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? t.loginProcessing : (authMode === 'login' ? t.login : t.signup)}
-            </button>
+            const handleNameUpdate = () => {
+                if (editNameInput.trim()) {
+                    setCurrentUser(prev => ({ ...prev, nickname: editNameInput }));
+                    setIsEditingProfile(false);
+                }
+            };
 
-            {loginError && (
-              <div className="text-center animate-in fade-in duration-300 mt-2">
-                 <p className="text-red-500 text-xs font-bold bg-red-50 py-1 px-3 rounded-full inline-block">
-                    {loginError}
-                 </p>
-              </div>
-            )}
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-gray-400 text-sm">
-              {authMode === 'login' ? t.noAccount : t.hasAccount}
-            </p>
-            <button 
-              onClick={() => {
-                setAuthMode(authMode === 'login' ? 'signup' : 'login');
-                setAuthForm({ email: '', password: '', nickname: '', avatar: null });
+            const handleAuthSubmit = async (e) => {
+                e.preventDefault();
                 setLoginError('');
-              }}
-              className="text-black font-bold text-sm mt-1 hover:underline"
-            >
-              {authMode === 'login' ? t.signupLink : t.loginLink}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+                
+                // 로컬 모드 (DB가 없을 때) fallback
+                if (!db) {
+                    const mockUser = {
+                        email: authForm.email,
+                        nickname: authForm.nickname || 'DemoUser',
+                        avatar: authForm.avatar || `https://i.pravatar.cc/150?u=${authForm.email}`,
+                        stats: { works: 0, level: 1 }
+                    };
+                    setCurrentUser(mockUser);
+                    setFollowingList([]);
+                    return;
+                }
 
-  return (
-    <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] pb-24 font-sans antialiased text-gray-900 relative">
-      
-      {notification && (
-        <div className="fixed top-4 left-4 right-4 z-[70] bg-white border border-gray-100 shadow-xl rounded-2xl p-4 flex items-center gap-3 animate-in slide-in-from-top-4 duration-300">
-          <div className="bg-green-100 p-2 rounded-full text-green-600">
-            <notification.icon size={20} />
-          </div>
-          <div>
-            <p className="text-xs font-bold text-gray-500">{notification.title}</p>
-            <p className="text-sm font-bold">{notification.message}</p>
-          </div>
-        </div>
-      )}
+                if (!firebaseUser) return;
+                setIsLoading(true);
+                const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'aura_users');
 
-      <div className="sticky top-0 z-40 flex justify-between items-center px-6 py-4 bg-white/70 backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center rotate-12 shadow-lg">
-            <Gem size={18} className="text-white fill-white" />
-          </div>
-          <span className="text-xl font-black tracking-tighter italic">SAPCORE</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setShowChatModal(true)} className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-50">
-            <MessageSquare size={20} className="text-gray-700" />
-          </button>
-          <div className="bg-white shadow-sm border border-gray-100 rounded-full px-4 py-1.5 flex items-center gap-2">
-            <Flame size={14} className="text-orange-500 fill-orange-500" />
-            <span className="text-xs font-bold">{1240 + currentUser.stats.works * 50} XP</span>
-          </div>
-        </div>
-      </div>
+                try {
+                    if (authMode === 'signup') {
+                        if (!authForm.email || !authForm.password || !authForm.nickname) {
+                            setLoginError(t.fillAll); setIsLoading(false); return;
+                        }
+                        const q = query(usersRef, where("email", "==", authForm.email));
+                        const querySnapshot = await getDocs(q);
+                        if (!querySnapshot.empty) { setLoginError(t.emailDup); setIsLoading(false); return; }
 
-      <main>
-        {activeTab === 'explore' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SectionTitle title={t.explore} subtitle={`${t.welcome}, ${currentUser.nickname}!`} />
-            <div className="px-6 space-y-6">
-              {[...posts]
-                .sort((a, b) => getRecommendationScore(b.tags) - getRecommendationScore(a.tags))
-                .map(card => {
-                const isFollowing = followingList.includes(card.author);
-                const isMe = card.author === currentUser.nickname;
-                const isRecommended = getRecommendationScore(card.tags) > 0;
+                        const newUser = {
+                            email: authForm.email, password: authForm.password, nickname: authForm.nickname,
+                            avatar: authForm.avatar || `https://i.pravatar.cc/150?u=${authForm.email}`,
+                            stats: { works: 0, level: 1 }
+                        };
+                        await addDoc(usersRef, newUser);
+                        setCurrentUser(newUser); setFollowingList([]);
+                    } else {
+                        const q = query(usersRef, where("email", "==", authForm.email));
+                        const querySnapshot = await getDocs(q);
+                        if (querySnapshot.empty) { setLoginError(t.loginFail); setIsLoading(false); return; }
 
+                        let foundUser = null;
+                        querySnapshot.forEach((doc) => {
+                            const userData = doc.data();
+                            if (userData.password === authForm.password) foundUser = userData;
+                        });
+
+                        if (foundUser) { setCurrentUser(foundUser); setFollowingList([]); }
+                        else { setLoginError(t.loginFail); }
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    setLoginError(t.errorAuth);
+                }
+                setIsLoading(false);
+            };
+
+            const handleLogout = () => {
+                setCurrentUser(null); setAuthForm({ email: '', password: '', nickname: '', avatar: null });
+                setActiveTab('explore'); setFollowingList([]); setLoginError(''); setUserInterests([]);
+            };
+
+            const handleSubmit = () => {
+                if (!inputText.trim()) return;
+                const commonData = {
+                    id: Date.now(), author: currentUser.nickname, authorAvatar: currentUser.avatar,
+                    isNew: true, tags: ['new', 'user_content']
+                };
+                const imageToUse = previewUrl || `https://picsum.photos/seed/${Date.now()}/800/600`;
+
+                if (uploadType === 'moment') {
+                    setPosts([{ ...commonData, category: 'My Moment', title: inputText, preview: imageToUse, stats: { engagement: 'New', interactions: '0' } }, ...posts]);
+                    setActiveTab('explore');
+                } else if (uploadType === 'video') {
+                    setVideos([{ ...commonData, title: inputText, thumb: imageToUse, views: '0', filter: videoFilter }, ...videos]);
+                    setActiveTab('nodes');
+                } else if (uploadType === 'webtoon') {
+                    setWebtoons([{ ...commonData, title: inputText, desc: inputDesc || 'No Desc', img: imageToUse, score: '10.0' }, ...webtoons]);
+                    setActiveTab('stories');
+                }
+                
+                const updatedUser = { ...currentUser, stats: { ...currentUser.stats, works: currentUser.stats.works + 1 } };
+                setCurrentUser(updatedUser);
+                setInputText(''); setInputDesc(''); setPreviewUrl(null); setShowCompose(false); setIsEditingVideo(false); setVideoFilter('');
+            };
+
+            if (!currentUser) {
                 return (
-                  <div key={card.id} className="relative group overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-xl shadow-gray-200/50">
-                    <div className="p-5">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100">
-                             <img src={card.authorAvatar || `https://i.pravatar.cc/100?u=${card.author}`} alt="avatar" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-gray-900 block">@{card.author}</span>
-                            {!isMe && (
-                              <button 
-                                onClick={() => toggleFollow(card.author)}
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 flex items-center gap-1 transition-all ${
-                                  isFollowing 
-                                    ? 'bg-gray-100 text-gray-500' 
-                                    : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
-                                }`}
-                              >
-                                {isFollowing ? (
-                                  <><UserCheck size={10} /> {t.following}</>
-                                ) : (
-                                  <><UserPlus size={10} /> {t.follow}</>
+                    <div className="max-w-md mx-auto min-h-screen bg-white flex flex-col items-center justify-center p-8 relative overflow-hidden font-sans">
+                        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[30%] bg-purple-200 rounded-full blur-[100px] opacity-50"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[30%] bg-blue-200 rounded-full blur-[100px] opacity-50"></div>
+                        <div className="z-10 w-full relative">
+                            <div className="flex justify-center gap-3 mb-8">
+                                {['ko', 'en', 'es', 'fr', 'ja', 'zh'].map(lang => (
+                                    <button key={lang} onClick={() => setLanguage(lang)} className={`w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold uppercase transition-all ${language === lang ? 'bg-black text-white border-black scale-110 shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-gray-400'}`}>{lang}</button>
+                                ))}
+                            </div>
+                            <div className="flex flex-col items-center mb-10">
+                                <div className="w-16 h-16 bg-black rounded-2xl flex items-center justify-center rotate-12 shadow-2xl mb-4">
+                                    <Gem size={32} className="text-white fill-white" />
+                                </div>
+                                <h1 className="text-4xl font-black tracking-tighter italic">SAPCORE</h1>
+                                <p className="text-gray-400 font-medium mt-2">Sapphire AI Core Universe</p>
+                            </div>
+                            <form onSubmit={handleAuthSubmit} className="space-y-4">
+                                {authMode === 'signup' && (
+                                    <div className="animate-in slide-in-from-bottom-5 duration-300 space-y-4">
+                                        <div className="flex justify-center mb-6">
+                                            <label className="relative cursor-pointer group">
+                                                <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center overflow-hidden hover:border-black transition-colors">
+                                                    {authForm.avatar ? <img src={authForm.avatar} className="w-full h-full object-cover" /> : <Camera className="text-gray-400" />}
+                                                </div>
+                                                <div className="absolute bottom-0 right-0 bg-black text-white p-1.5 rounded-full shadow-lg"><Plus size={12} /></div>
+                                                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, (url) => setAuthForm({...authForm, avatar: url}))} />
+                                            </label>
+                                        </div>
+                                        <div className="relative"><User className="absolute left-4 top-3.5 text-gray-400" size={20} /><input type="text" placeholder={t.nickPlace} className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1" value={authForm.nickname} onChange={(e) => setAuthForm({...authForm, nickname: e.target.value})} /></div>
+                                    </div>
                                 )}
-                              </button>
-                            )}
-                          </div>
+                                <div className="relative"><Mail className="absolute left-4 top-3.5 text-gray-400" size={20} /><input type="email" placeholder={t.emailPlace} className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1" value={authForm.email} onChange={(e) => setAuthForm({...authForm, email: e.target.value})} /></div>
+                                <div className="relative"><Lock className="absolute left-4 top-3.5 text-gray-400" size={20} /><input type="password" placeholder={t.pwPlace} className="w-full bg-gray-50 border border-gray-200 rounded-2xl py-3 pl-12 pr-4 outline-none focus:border-black focus:ring-1" value={authForm.password} onChange={(e) => setAuthForm({...authForm, password: e.target.value})} /></div>
+                                <button type="submit" disabled={isLoading} className="w-full bg-black text-white py-4 rounded-2xl font-bold text-lg shadow-xl hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-50">{isLoading ? t.loginProcessing : (authMode === 'login' ? t.login : t.signup)}</button>
+                                {loginError && <div className="text-center mt-2"><p className="text-red-500 text-xs font-bold bg-red-50 py-1 px-3 rounded-full inline-block">{loginError}</p></div>}
+                            </form>
+                            <div className="mt-6 text-center"><p className="text-gray-400 text-sm">{authMode === 'login' ? t.noAccount : t.hasAccount}</p><button onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setAuthForm({ email: '', password: '', nickname: '', avatar: null }); setLoginError(''); }} className="text-black font-bold text-sm mt-1 hover:underline">{authMode === 'login' ? t.signupLink : t.loginLink}</button></div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="px-2 py-1 rounded-lg bg-gray-50 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                            {card.category}
-                          </div>
-                          {isRecommended && (
-                             <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-500">
-                               <Sparkles size={10} /> {t.recommended}
-                             </div>
-                          )}
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-bold leading-tight mb-2 group-hover:text-indigo-600 transition-colors break-keep">
-                        {card.title}
-                      </h3>
                     </div>
-                    <div className="relative aspect-[16/10] mx-4 mb-4 rounded-2xl overflow-hidden shadow-inner bg-gray-100">
-                      <img src={card.preview} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="content" />
-                    </div>
-                    <div className="px-5 pb-5 flex justify-between items-center border-t border-gray-50 pt-4">
-                       <div className="flex gap-4">
-                          <button 
-                            onClick={() => handleLike(card.id, card.tags)} 
-                            className={`flex items-center gap-1 text-xs font-bold ${liked[card.id] ? 'text-red-500' : 'text-gray-400'}`}
-                          >
-                            <Heart size={16} className={liked[card.id] ? 'fill-current' : ''} />
-                            Like
-                          </button>
-                          <button 
-                            onClick={() => setActivePostForComments(card.id)}
-                            className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-gray-600"
-                          >
-                            <MessageSquare size={16} />
-                            Comment
-                          </button>
-                       </div>
-                    </div>
-                  </div>
                 );
-              })}
-            </div>
-          </div>
-        )}
+            }
 
-        {activeTab === 'nodes' && (
-          <div className="animate-in fade-in zoom-in-95 duration-500">
-            <SectionTitle title={t.nodes} subtitle="Continuous Visual Experience" />
-            <div className="px-6 space-y-8">
-              {[...videos]
-                .sort((a, b) => getRecommendationScore(b.tags) - getRecommendationScore(a.tags)) 
-                .map(node => {
-                  const isRecommended = getRecommendationScore(node.tags) > 0;
-                  return (
-                    <div key={node.id} className="relative">
-                      {isRecommended && (
-                        <div className="absolute top-2 right-2 z-20 bg-indigo-600 text-white text-[10px] px-2 py-1 rounded-full font-bold flex items-center gap-1 shadow-lg">
-                           <Sparkles size={10} /> Pick
+            return (
+                <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] pb-24 font-sans antialiased text-gray-900 relative">
+                    {/* Notifications */}
+                    {notification && (
+                        <div className="fixed top-4 left-4 right-4 z-[70] bg-white border border-gray-100 shadow-xl rounded-2xl p-4 flex items-center gap-3 animate-bounce">
+                            <div className="bg-green-100 p-2 rounded-full text-green-600"><notification.icon size={20} /></div>
+                            <div><p className="text-xs font-bold text-gray-500">{notification.title}</p><p className="text-sm font-bold">{notification.message}</p></div>
                         </div>
-                      )}
-                      <div className="absolute -left-3 top-0 bottom-0 w-1 bg-gradient-to-b from-black/10 to-transparent rounded-full" />
-                      <div className="rounded-[24px] overflow-hidden bg-black group relative shadow-2xl">
-                        <img src={node.thumb} className={`w-full aspect-video object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000 ${node.filter || ''}`} alt="v" />
-                        <div className="absolute inset-0 flex flex-col justify-between p-6">
-                          <div className="flex justify-end">
-                            <div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] text-white font-bold">
-                              {node.views} nodes watching
-                            </div>
-                          </div>
-                          <div className="flex items-end justify-between">
-                            <div>
-                              <p className="text-white text-lg font-bold leading-tight mb-1">{node.title}</p>
-                              <p className="text-white/60 text-xs font-medium">By {node.author}</p>
-                            </div>
-                            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg transform group-hover:rotate-12 transition-transform">
-                              <PlayCircle size={28} className="text-black" />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-              })}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'stories' && (
-           <div className="animate-in slide-in-from-right-10 duration-500">
-             <SectionTitle title={t.stories} subtitle="New Dimensions of Story" />
-             <div className="px-6 grid grid-cols-1 gap-6">
-                {[...webtoons]
-                  .sort((a, b) => getRecommendationScore(b.tags) - getRecommendationScore(a.tags))
-                  .map(story => {
-                    const isRecommended = getRecommendationScore(story.tags) > 0;
-                    return (
-                      <div key={story.id} className={`flex gap-4 bg-white p-3 rounded-[28px] border hover:shadow-lg transition-all group ${isRecommended ? 'border-indigo-200 shadow-indigo-100' : 'border-gray-100'}`}>
-                        <div className="w-24 h-32 rounded-2xl overflow-hidden flex-shrink-0 shadow-md relative">
-                          <img src={story.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="s" />
-                          {isRecommended && <div className="absolute top-1 left-1 w-2 h-2 bg-indigo-500 rounded-full"></div>}
-                        </div>
-                        <div className="flex flex-col justify-between py-1 flex-1">
-                          <div>
-                            <div className="flex items-center gap-1 mb-1">
-                              <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                              <span className="text-[10px] font-black">{story.score}</span>
-                              {story.author === currentUser.nickname && <span className="text-[10px] text-indigo-500 font-bold ml-1">#MY_STORY</span>}
-                              {isRecommended && <span className="text-[10px] text-indigo-500 font-bold ml-1 flex items-center"><Sparkles size={8}/> REC</span>}
-                            </div>
-                            <h4 className="text-lg font-bold tracking-tight mb-1">{story.title}</h4>
-                            <p className="text-xs text-gray-500 line-clamp-2 mb-2">{story.desc || '설명이 없습니다.'}</p>
-                            <p className="text-[10px] text-gray-400 font-bold">{story.author} 작가</p>
-                          </div>
-                          <button className="flex items-center gap-2 text-xs font-black text-black mt-2">
-                            지금 감상하기
-                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center">
-                              <Plus size={14} />
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                  );
-                })}
-             </div>
-           </div>
-        )}
-
-        {activeTab === 'profile' && (
-           <div className="animate-in fade-in duration-700">
-              <div className="px-6 py-8">
-                 <div className="flex flex-col items-center">
-                    <div className="relative mb-6">
-                      <div className="w-32 h-32 rounded-[48px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 rotate-6">
-                         <img src={currentUser.avatar} className="w-full h-full rounded-[44px] border-4 border-white object-cover -rotate-6" alt="me" />
-                      </div>
-                    </div>
-                    
-                    {isEditingProfile ? (
-                      <div className="flex items-center gap-2 mb-1">
-                        <input 
-                          type="text" 
-                          value={editNameInput} 
-                          onChange={(e) => setEditNameInput(e.target.value)}
-                          className="text-2xl font-black italic uppercase text-center bg-gray-100 rounded-lg px-2 py-1 w-48 border-none outline-none"
-                          autoFocus
-                        />
-                        <button onClick={handleNameUpdate} className="p-2 bg-black text-white rounded-full">
-                          <Check size={16} />
-                        </button>
-                        <button onClick={() => setIsEditingProfile(false)} className="p-2 bg-gray-200 text-gray-500 rounded-full">
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mb-1">
-                        <h2 className="text-2xl font-black italic uppercase">{currentUser.nickname}</h2>
-                        <button onClick={() => {
-                          setEditNameInput(currentUser.nickname);
-                          setIsEditingProfile(true);
-                        }} className="p-1.5 bg-gray-50 text-gray-400 rounded-full hover:bg-gray-100 hover:text-black transition-colors">
-                          <Edit2 size={14} />
-                        </button>
-                      </div>
                     )}
 
-                    <p className="text-gray-400 text-sm font-medium mb-6">{currentUser.email}</p>
-                    
-                    <div className="flex gap-12 mb-8">
-                       <div className="text-center">
-                         <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Works</p>
-                         <p className="text-xl font-black">{currentUser.stats.works}</p>
-                       </div>
-                       <div className="text-center">
-                          <p className="text-[10px] text-gray-400 font-black uppercase mb-1">{t.following}</p>
-                          <p className="text-xl font-black text-indigo-600">{followingList.length}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-[10px] text-gray-400 font-black uppercase mb-1">Followers</p>
-                         <p className="text-xl font-black">0</p>
-                       </div>
+                    {/* Header */}
+                    <div className="sticky top-0 z-40 flex justify-between items-center px-6 py-4 bg-white/70 backdrop-blur-xl">
+                        <div className="flex items-center gap-2"><div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center rotate-12 shadow-lg"><Gem size={18} className="text-white fill-white" /></div><span className="text-xl font-black tracking-tighter italic">SAPCORE</span></div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => setShowChatModal(true)} className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-50"><MessageSquare size={20} className="text-gray-700" /></button>
+                            <div className="bg-white shadow-sm border border-gray-100 rounded-full px-4 py-1.5 flex items-center gap-2"><Flame size={14} className="text-orange-500 fill-orange-500" /><span className="text-xs font-bold">{1240 + currentUser.stats.works * 50} XP</span></div>
+                        </div>
                     </div>
 
-                    <div className="flex gap-2 mb-4 w-full">
-                      <button 
-                        onClick={handleExportData}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-2xl text-xs font-bold hover:bg-black transition-colors"
-                      >
-                        <Download size={14} /> {t.exportData}
-                      </button>
-                      <button 
-                        onClick={handleLogout}
-                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-red-500 rounded-2xl text-xs font-bold hover:bg-gray-200 transition-colors"
-                      >
-                        <LogOut size={14} /> {t.logout}
-                      </button>
+                    <main>
+                        {activeTab === 'explore' && (
+                            <div className="animate-pulse-once">
+                                <div className="mb-6 px-6 pt-6"><h2 className="text-3xl font-black tracking-tighter text-gray-900 leading-none">{t.explore}</h2><p className="text-sm text-gray-400 font-medium mt-1">{t.welcome}, {currentUser.nickname}!</p></div>
+                                <div className="px-6 space-y-6">
+                                    {[...posts].sort((a, b) => getRecommendationScore(b.tags) - getRecommendationScore(a.tags)).map(card => (
+                                        <div key={card.id} className="relative group overflow-hidden rounded-[32px] bg-white border border-gray-100 shadow-xl shadow-gray-200/50">
+                                            <div className="p-5 flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden"><img src={card.authorAvatar} alt="avatar" /></div>
+                                                    <div><span className="text-xs font-bold text-gray-900 block">@{card.author}</span>
+                                                    {card.author !== currentUser.nickname && <button onClick={() => toggleFollow(card.author)} className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-0.5 flex items-center gap-1 bg-indigo-50 text-indigo-600">{followingList.includes(card.author) ? <><UserCheck size={10} /> {t.following}</> : <><UserPlus size={10} /> {t.follow}</>}</button>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1"><div className="px-2 py-1 rounded-lg bg-gray-50 text-[10px] font-black uppercase">{card.category}</div>{getRecommendationScore(card.tags) > 0 && <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-500"><Sparkles size={10} /> {t.recommended}</div>}</div>
+                                            </div>
+                                            <h3 className="px-5 text-xl font-bold leading-tight mb-2">{card.title}</h3>
+                                            <div className="relative aspect-[16/10] mx-4 mb-4 rounded-2xl overflow-hidden shadow-inner bg-gray-100"><img src={card.preview} className="w-full h-full object-cover" /></div>
+                                            <div className="px-5 pb-5 flex justify-between items-center border-t border-gray-50 pt-4">
+                                                <div className="flex gap-4">
+                                                    <button onClick={() => handleLike(card.id, card.tags)} className={`flex items-center gap-1 text-xs font-bold ${liked[card.id] ? 'text-red-500' : 'text-gray-400'}`}><Heart size={16} className={liked[card.id] ? 'fill-current' : ''} /> Like</button>
+                                                    <button onClick={() => setActivePostForComments(card.id)} className="flex items-center gap-1 text-xs font-bold text-gray-400"><MessageSquare size={16} /> Comment</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'nodes' && (
+                            <div className="px-6 space-y-8">
+                                <div className="mb-6 pt-6"><h2 className="text-3xl font-black">{t.nodes}</h2></div>
+                                {videos.map(node => (
+                                    <div key={node.id} className="relative rounded-[24px] overflow-hidden bg-black shadow-2xl">
+                                        <img src={node.thumb} className={`w-full aspect-video object-cover opacity-80 ${node.filter || ''}`} />
+                                        <div className="absolute inset-0 flex flex-col justify-between p-6">
+                                            <div className="flex justify-end"><div className="bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-[10px] text-white font-bold">{node.views} views</div></div>
+                                            <div><p className="text-white text-lg font-bold">{node.title}</p><p className="text-white/60 text-xs font-medium">By {node.author}</p></div>
+                                        </div>
+                                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center"><PlayCircle size={28} /></div></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === 'stories' && (
+                            <div className="px-6 grid gap-6">
+                                <div className="mb-6 pt-6"><h2 className="text-3xl font-black">{t.stories}</h2></div>
+                                {webtoons.map(story => (
+                                    <div key={story.id} className="flex gap-4 bg-white p-3 rounded-[28px] border border-gray-100 shadow-sm">
+                                        <div className="w-24 h-32 rounded-2xl overflow-hidden flex-shrink-0 relative"><img src={story.img} className="w-full h-full object-cover" /></div>
+                                        <div className="flex flex-col justify-between py-1 flex-1">
+                                            <div>
+                                                <div className="flex items-center gap-1 mb-1"><Star size={12} className="text-yellow-400 fill-yellow-400" /><span className="text-[10px] font-black">{story.score}</span></div>
+                                                <h4 className="text-lg font-bold tracking-tight mb-1">{story.title}</h4>
+                                                <p className="text-xs text-gray-500 line-clamp-2">{story.desc}</p>
+                                            </div>
+                                            <button className="flex items-center gap-2 text-xs font-black text-black mt-2">Read Now <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center"><Plus size={14} /></div></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {activeTab === 'profile' && (
+                            <div className="px-6 py-8">
+                                <div className="flex flex-col items-center">
+                                    <div className="relative mb-6 w-32 h-32 rounded-[48px] bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-1 rotate-6">
+                                        <img src={currentUser.avatar} className="w-full h-full rounded-[44px] border-4 border-white object-cover -rotate-6" />
+                                    </div>
+                                    {isEditingProfile ? (
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <input type="text" value={editNameInput} onChange={(e) => setEditNameInput(e.target.value)} className="text-2xl font-black text-center bg-gray-100 rounded-lg px-2 w-48" autoFocus />
+                                            <button onClick={handleNameUpdate} className="p-2 bg-black text-white rounded-full"><Check size={16} /></button>
+                                            <button onClick={() => setIsEditingProfile(false)} className="p-2 bg-gray-200 text-gray-500 rounded-full"><X size={16} /></button>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 mb-1"><h2 className="text-2xl font-black italic uppercase">{currentUser.nickname}</h2><button onClick={() => { setEditNameInput(currentUser.nickname); setIsEditingProfile(true); }} className="p-1.5 bg-gray-50 text-gray-400 rounded-full"><Edit2 size={14} /></button></div>
+                                    )}
+                                    <p className="text-gray-400 text-sm font-medium mb-6">{currentUser.email}</p>
+                                    <div className="flex gap-12 mb-8 text-center">
+                                        <div><p className="text-[10px] text-gray-400 font-black uppercase">Works</p><p className="text-xl font-black">{currentUser.stats.works}</p></div>
+                                        <div><p className="text-[10px] text-gray-400 font-black uppercase">{t.following}</p><p className="text-xl font-black text-indigo-600">{followingList.length}</p></div>
+                                        <div><p className="text-[10px] text-gray-400 font-black uppercase">Followers</p><p className="text-xl font-black">0</p></div>
+                                    </div>
+                                    <div className="flex gap-2 mb-4 w-full">
+                                        <button onClick={handleExportData} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-2xl text-xs font-bold hover:bg-black transition-colors"><Download size={14} /> {t.exportData}</button>
+                                        <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-red-500 rounded-2xl text-xs font-bold hover:bg-gray-200 transition-colors"><LogOut size={14} /> {t.logout}</button>
+                                    </div>
+                                </div>
+                                {/* My Uploads Grid */}
+                                <div className="grid grid-cols-3 gap-2 mt-6">
+                                    {posts.filter(p => p.author === currentUser.nickname).map(p => <div key={`p-${p.id}`} className="aspect-square bg-gray-100 rounded-xl overflow-hidden"><img src={p.preview} className="w-full h-full object-cover" /></div>)}
+                                    {videos.filter(v => v.author === currentUser.nickname).map(v => <div key={`v-${v.id}`} className="aspect-square bg-black rounded-xl overflow-hidden relative"><img src={v.thumb} className={`w-full h-full object-cover opacity-80 ${v.filter}`} /><PlayCircle className="absolute inset-0 m-auto text-white" /></div>)}
+                                    {webtoons.filter(w => w.author === currentUser.nickname).map(w => <div key={`w-${w.id}`} className="aspect-square bg-gray-100 rounded-xl overflow-hidden relative"><img src={w.img} className="w-full h-full object-cover" /><span className="absolute bottom-1 right-1 bg-black text-white text-[8px] px-1 rounded">TOON</span></div>)}
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Modals & Floating UI (Chat, Compose, TabBar) */}
+                    {showChatModal && (
+                        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-sm rounded-[32px] h-[70vh] flex flex-col shadow-2xl overflow-hidden">
+                                <div className="p-4 bg-gray-50 flex justify-between items-center border-b border-gray-100"><h3 className="font-black text-lg">{t.chat}</h3><button onClick={() => setShowChatModal(false)} className="p-2 bg-white rounded-full"><X size={18} /></button></div>
+                                <div className="flex p-2 gap-2 bg-gray-50"><button onClick={() => setActiveChatTab('my')} className={`flex-1 py-2 text-xs font-bold rounded-xl ${activeChatTab === 'my' ? 'bg-black text-white' : 'text-gray-400'}`}>{t.groupChat}</button><button onClick={() => setActiveChatTab('find')} className={`flex-1 py-2 text-xs font-bold rounded-xl ${activeChatTab === 'find' ? 'bg-black text-white' : 'text-gray-400'}`}>{t.findGroup}</button></div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                    {activeChatTab === 'my' ? (
+                                        <>
+                                            <div className="flex gap-2 mb-4"><input type="text" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder={t.groupName} className="flex-1 bg-gray-100 rounded-xl px-3 text-sm border-none" /><button onClick={handleCreateGroup} className="p-2 bg-black text-white rounded-xl"><Plus size={18} /></button></div>
+                                            {chatGroups.map(group => <div key={group.id} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-2xl"><div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600"><Users size={20} /></div><div className="flex-1"><p className="font-bold text-sm">{group.name}</p><p className="text-xs text-gray-400">{group.lastMsg}</p></div></div>)}
+                                        </>
+                                    ) : (
+                                        publicGroups.map(group => <div key={group.id} className="p-4 border border-gray-100 rounded-2xl flex justify-between items-center"><div><p className="font-bold">{group.name}</p><p className="text-xs text-gray-400">{group.members} members</p></div><button onClick={() => handleJoinGroup(group)} className="px-3 py-1 bg-black text-white text-xs font-bold rounded-lg">{t.join}</button></div>)
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {showCompose && (
+                        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+                            <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl relative">
+                                <button onClick={() => { setShowCompose(false); setPreviewUrl(null); setInputText(''); setIsEditingVideo(false); setVideoFilter(''); }} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full"><X size={20} /></button>
+                                <h3 className="text-xl font-black mb-4">{t.createTitle}</h3>
+                                <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-2xl">
+                                    {[{ id: 'moment', icon: Compass }, { id: 'video', icon: Film }, { id: 'webtoon', icon: PenTool }].map(type => (
+                                        <button key={type.id} onClick={() => { setUploadType(type.id); setPreviewUrl(null); setIsEditingVideo(false); }} className={`flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1 ${uploadType === type.id ? 'bg-white shadow-md text-black' : 'text-gray-400'}`}><type.icon size={14} /> {type.id}</button>
+                                    ))}
+                                </div>
+                                <div className="space-y-4 mb-6">
+                                    <input type="text" value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder={t.momentTitle} className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-black/5" />
+                                    {uploadType === 'video' && previewUrl && (
+                                        <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                            <div className="flex justify-between items-center mb-3"><span className="text-xs font-bold flex items-center gap-1"><Scissors size={14} /> {t.editVideo}</span><button onClick={() => setIsEditingVideo(!isEditingVideo)} className="text-[10px] bg-black text-white px-2 py-1 rounded">{isEditingVideo ? 'Close' : 'Edit'}</button></div>
+                                            {isEditingVideo && <div className="grid grid-cols-3 gap-2">{['none', 'grayscale(100%)', 'sepia(80%)', 'saturate(200%)', 'hue-rotate(90deg)', 'invert(100%)'].map((filter, i) => <button key={i} onClick={() => setVideoFilter(filter === 'none' ? '' : filter)} className="h-10 rounded bg-gray-200 text-[10px] overflow-hidden" style={{ filter: filter }}>F{i}</button>)}</div>}
+                                        </div>
+                                    )}
+                                    {uploadType === 'webtoon' && <textarea value={inputDesc} onChange={(e) => setInputDesc(e.target.value)} placeholder={t.webtoonDesc} className="w-full h-24 p-4 bg-gray-50 rounded-2xl border-none resize-none" />}
+                                    <label className="block w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 relative group">
+                                        {previewUrl ? <img src={previewUrl} className="w-full h-full object-cover rounded-2xl" style={{ filter: videoFilter }} /> : <div className="flex flex-col items-center text-gray-400"><ImageIcon className="w-8 h-8 mb-2" /><span className="text-xs font-bold">Upload</span></div>}
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, setPreviewUrl)} />
+                                    </label>
+                                </div>
+                                <button onClick={handleSubmit} className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2"><span>{t.upload}</span> <Send size={16} /></button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activePostForComments && (
+                        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center">
+                            <div className="bg-white w-full max-w-sm rounded-t-[32px] sm:rounded-[32px] h-[80vh] flex flex-col shadow-2xl relative">
+                                <div className="p-4 border-b border-gray-100 flex justify-between items-center"><h3 className="font-bold text-lg ml-2">Comments</h3><button onClick={() => setActivePostForComments(null)} className="p-2 bg-gray-100 rounded-full"><X size={18} /></button></div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                                    {(commentsData[activePostForComments] || []).map((comment) => (
+                                        <div key={comment.id} className="flex gap-3"><img src={comment.avatar} className="w-8 h-8 rounded-full" /><div><p className="text-xs font-bold">{comment.user}</p><p className="text-sm bg-gray-50 px-3 py-2 rounded-2xl">{comment.text}</p></div></div>
+                                    ))}
+                                </div>
+                                <div className="p-4 border-t border-gray-100"><div className="flex gap-2"><input type="text" value={commentInput} onChange={(e) => setCommentInput(e.target.value)} placeholder={t.commentPlace} className="flex-1 bg-gray-100 border-none rounded-2xl px-4" /><button onClick={handleCommentSubmit} className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center"><Send size={16} /></button></div></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Bottom Nav */}
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-50">
+                        <nav className="bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[32px] px-6 py-4 flex justify-between items-center">
+                            <button onClick={() => setActiveTab('explore')} className="flex flex-col items-center"><Compass size={24} className={activeTab === 'explore' ? 'text-black' : 'text-gray-300'} /></button>
+                            <button onClick={() => setActiveTab('nodes')} className="flex flex-col items-center"><PlayCircle size={24} className={activeTab === 'nodes' ? 'text-black' : 'text-gray-300'} /></button>
+                            <div className="relative -top-10"><button onClick={() => setShowCompose(true)} className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl hover:rotate-90 transition-transform"><Plus size={32} /></button></div>
+                            <button onClick={() => setActiveTab('stories')} className="flex flex-col items-center"><BookOpen size={24} className={activeTab === 'stories' ? 'text-black' : 'text-gray-300'} /></button>
+                            <button onClick={() => setActiveTab('profile')} className="flex flex-col items-center"><UserCircle2 size={24} className={activeTab === 'profile' ? 'text-black' : 'text-gray-300'} /></button>
+                        </nav>
                     </div>
-                 </div>
-              </div>
-              
-              <div className="px-6">
-                 <h3 className="font-bold mb-4 text-sm border-t border-gray-100 pt-6">{t.myUploads}</h3>
-                 <div className="grid grid-cols-3 gap-2">
-                    {posts.filter(p => p.author === currentUser.nickname).map(p => (
-                       <div key={`p-${p.id}`} className="aspect-square bg-gray-100 rounded-xl overflow-hidden"><img src={p.preview} className="w-full h-full object-cover" alt="" /></div>
-                    ))}
-                    {videos.filter(v => v.author === currentUser.nickname).map(v => (
-                       <div key={`v-${v.id}`} className="aspect-square bg-black rounded-xl overflow-hidden relative">
-                          <img src={v.thumb} className={`w-full h-full object-cover opacity-80 ${v.filter || ''}`} alt="" />
-                          <PlayCircle className="absolute inset-0 m-auto text-white w-6 h-6" />
-                       </div>
-                    ))}
-                    {webtoons.filter(w => w.author === currentUser.nickname).map(w => (
-                       <div key={`w-${w.id}`} className="aspect-square bg-gray-100 rounded-xl overflow-hidden relative">
-                          <img src={w.img} className="w-full h-full object-cover" alt="" />
-                          <span className="absolute bottom-1 right-1 bg-black text-white text-[8px] px-1 rounded">TOON</span>
-                       </div>
-                    ))}
-                    {(posts.filter(p => p.author === currentUser.nickname).length + 
-                      videos.filter(v => v.author === currentUser.nickname).length + 
-                      webtoons.filter(w => w.author === currentUser.nickname).length) === 0 && (
-                        <div className="col-span-3 py-10 text-center text-gray-400 text-xs">
-                          {t.noUploads}
-                        </div>
-                      )}
-                 </div>
-              </div>
-           </div>
-        )}
-      </main>
-
-      {showChatModal && (
-        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white w-full max-w-sm rounded-[32px] h-[70vh] flex flex-col shadow-2xl overflow-hidden">
-            <div className="p-4 bg-gray-50 flex justify-between items-center border-b border-gray-100">
-               <h3 className="font-black text-lg">{t.chat}</h3>
-               <button onClick={() => setShowChatModal(false)} className="p-2 bg-white rounded-full"><X size={18} /></button>
-            </div>
-            
-            <div className="flex p-2 gap-2 bg-gray-50">
-               <button onClick={() => setActiveChatTab('my')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${activeChatTab === 'my' ? 'bg-black text-white' : 'text-gray-400'}`}>{t.groupChat}</button>
-               <button onClick={() => setActiveChatTab('find')} className={`flex-1 py-2 text-xs font-bold rounded-xl transition-colors ${activeChatTab === 'find' ? 'bg-black text-white' : 'text-gray-400'}`}>{t.findGroup}</button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-               {activeChatTab === 'my' ? (
-                 <>
-                   <div className="flex gap-2 mb-4">
-                      <input 
-                        type="text" 
-                        value={newGroupName} 
-                        onChange={e => setNewGroupName(e.target.value)}
-                        placeholder={t.groupName}
-                        className="flex-1 bg-gray-100 rounded-xl px-3 text-sm border-none"
-                      />
-                      <button onClick={handleCreateGroup} className="p-2 bg-black text-white rounded-xl"><Plus size={18} /></button>
-                   </div>
-                   {chatGroups.map(group => (
-                     <div key={group.id} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-2xl shadow-sm hover:bg-gray-50 cursor-pointer">
-                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-                           <Users size={20} />
-                        </div>
-                        <div className="flex-1">
-                           <p className="font-bold text-sm">{group.name}</p>
-                           <p className="text-xs text-gray-400">{group.lastMsg}</p>
-                        </div>
-                     </div>
-                   ))}
-                 </>
-               ) : (
-                 <>
-                   <div className="relative mb-4">
-                      <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                      <input type="text" placeholder={t.findGroup} className="w-full pl-9 pr-4 py-2 bg-gray-100 rounded-xl text-sm border-none" />
-                   </div>
-                   {publicGroups.map(group => (
-                      <div key={group.id} className="p-4 border border-gray-100 rounded-2xl flex justify-between items-center">
-                         <div>
-                            <p className="font-bold">{group.name}</p>
-                            <p className="text-xs text-gray-400">{group.desc} • {group.members}명</p>
-                         </div>
-                         <button 
-                           onClick={() => handleJoinGroup(group)}
-                           className="px-3 py-1 bg-black text-white text-xs font-bold rounded-lg"
-                         >
-                           {t.join}
-                         </button>
-                      </div>
-                   ))}
-                 </>
-               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCompose && (
-        <div className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-[32px] p-6 shadow-2xl relative animate-in slide-in-from-bottom-10 duration-300 max-h-[90vh] overflow-y-auto">
-            <button 
-              onClick={() => {
-                setShowCompose(false);
-                setPreviewUrl(null);
-                setInputText('');
-                setInputDesc('');
-                setIsEditingVideo(false);
-                setVideoFilter('');
-              }} 
-              className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
-            >
-              <X size={20} />
-            </button>
-            
-            <h3 className="text-xl font-black mb-4">{t.createTitle}</h3>
-
-            <div className="flex gap-2 mb-6 bg-gray-100 p-1 rounded-2xl">
-              {[
-                { id: 'moment', icon: Compass, label: 'Moment' },
-                { id: 'video', icon: Film, label: 'Video' },
-                { id: 'webtoon', icon: PenTool, label: 'Webtoon' }
-              ].map(type => (
-                <button
-                  key={type.id}
-                  onClick={() => {
-                    setUploadType(type.id);
-                    setPreviewUrl(null);
-                    setIsEditingVideo(false);
-                  }}
-                  className={`flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all ${
-                    uploadType === type.id ? 'bg-white shadow-md text-black' : 'text-gray-400 hover:text-gray-600'
-                  }`}
-                >
-                  <type.icon size={14} />
-                  {type.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-4 mb-6">
-               <input
-                 type="text"
-                 value={inputText}
-                 onChange={(e) => setInputText(e.target.value)}
-                 placeholder={
-                   uploadType === 'moment' ? t.momentTitle :
-                   uploadType === 'video' ? t.videoTitle :
-                   t.webtoonTitle
-                 }
-                 className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-black/5 placeholder:text-gray-400 text-sm font-bold"
-               />
-
-               {uploadType === 'video' && previewUrl && (
-                 <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                   <div className="flex justify-between items-center mb-3">
-                      <span className="text-xs font-bold flex items-center gap-1"><Scissors size={14} /> {t.editVideo}</span>
-                      <button onClick={() => setIsEditingVideo(!isEditingVideo)} className="text-[10px] bg-black text-white px-2 py-1 rounded">
-                        {isEditingVideo ? '닫기' : '편집'}
-                      </button>
-                   </div>
-                   {isEditingVideo && (
-                     <div className="grid grid-cols-3 gap-2">
-                        {['none', 'grayscale(100%)', 'sepia(80%)', 'saturate(200%)', 'hue-rotate(90deg)', 'invert(100%)'].map((filter, i) => (
-                           <button 
-                             key={i} 
-                             onClick={() => setVideoFilter(filter === 'none' ? '' : filter)}
-                             className="h-10 rounded bg-gray-200 text-[10px] overflow-hidden relative"
-                             style={{ filter: filter }}
-                           >
-                             Filter {i}
-                           </button>
-                        ))}
-                     </div>
-                   )}
-                 </div>
-               )}
-
-               {uploadType === 'webtoon' ? (
-                 <textarea 
-                    value={inputDesc}
-                    onChange={(e) => setInputDesc(e.target.value)}
-                    placeholder={t.webtoonDesc}
-                    className="w-full h-24 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-black/5 resize-none placeholder:text-gray-400 text-sm font-medium"
-                 />
-               ) : uploadType === 'moment' && (
-                 <textarea 
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder={t.momentTitle}
-                    className="w-full h-24 p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-black/5 resize-none placeholder:text-gray-400 text-sm font-medium"
-                 />
-               )}
-
-               <label className="block w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-gray-400 transition-all overflow-hidden relative group">
-                  {previewUrl ? (
-                    <img src={previewUrl} alt="preview" className="w-full h-full object-cover" style={{ filter: videoFilter }} />
-                  ) : (
-                     <div className="flex flex-col items-center text-gray-400 group-hover:text-gray-600">
-                       <ImageIcon className="w-8 h-8 mb-2" />
-                       <span className="text-xs font-bold">
-                         {uploadType === 'moment' ? t.uploadMoment : uploadType === 'video' ? t.uploadVideo : t.uploadWebtoon}
-                       </span>
-                     </div>
-                  )}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageChange(e, setPreviewUrl)} />
-               </label>
-            </div>
-
-            <button 
-              onClick={handleSubmit}
-              className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors active:scale-95"
-            >
-              <span>{t.upload} ({uploadType.toUpperCase()})</span>
-              <Send size={16} />
-            </button>
-          </div>
-        </div>
-      )}
-      
-      {activePostForComments && (
-        <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-sm rounded-t-[32px] sm:rounded-[32px] h-[80vh] flex flex-col shadow-2xl relative animate-in slide-in-from-bottom-10 duration-300">
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-bold text-lg ml-2">Comments</h3>
-              <button 
-                onClick={() => setActivePostForComments(null)}
-                className="p-2 bg-gray-100 rounded-full hover:bg-gray-200"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {(commentsData[activePostForComments] || []).map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                   <img src={comment.avatar} className="w-8 h-8 rounded-full object-cover border border-gray-100 flex-shrink-0" alt="avatar" />
-                   <div>
-                      <p className="text-xs font-bold">{comment.user}</p>
-                      <p className="text-sm text-gray-700 bg-gray-50 px-3 py-2 rounded-2xl rounded-tl-none mt-1">{comment.text}</p>
-                   </div>
                 </div>
-              ))}
-            </div>
+            );
+        };
 
-            <div className="p-4 border-t border-gray-100 bg-white rounded-b-[32px]">
-               {(followingList.includes(posts.find(p => p.id === activePostForComments)?.author) || 
-                 posts.find(p => p.id === activePostForComments)?.author === currentUser.nickname) ? (
-                 <div className="flex gap-2">
-                   <input 
-                     type="text" 
-                     value={commentInput}
-                     onChange={(e) => setCommentInput(e.target.value)}
-                     placeholder={t.commentPlace}
-                     className="flex-1 bg-gray-100 border-none rounded-2xl px-4 text-sm focus:ring-2 focus:ring-black/10"
-                   />
-                   <button 
-                     onClick={handleCommentSubmit}
-                     className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center hover:bg-gray-800 disabled:opacity-50"
-                     disabled={!commentInput.trim()}
-                   >
-                     <Send size={16} />
-                   </button>
-                 </div>
-               ) : (
-                 <div className="text-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-xs font-bold text-gray-400 flex items-center justify-center gap-1">
-                      <Lock size={12} />
-                      {t.follow} to comment
-                    </p>
-                 </div>
-               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-50">
-        <nav className="bg-white/80 backdrop-blur-2xl border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-[32px] px-6 py-4 flex justify-between items-center">
-          <NavItem id="explore" icon={Compass} label={t.explore} />
-          <NavItem id="nodes" icon={PlayCircle} label={t.nodes} />
-          <div className="relative -top-10">
-            <button 
-              onClick={() => setShowCompose(true)} 
-              className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl shadow-black/40 hover:rotate-90 transition-transform duration-500"
-            >
-              <Plus size={32} />
-            </button>
-          </div>
-          <NavItem id="stories" icon={BookOpen} label={t.stories} />
-          <NavItem id="profile" icon={UserCircle2} label={t.profile} />
-        </nav>
-      </div>
-
-    </div>
-  );
-};
-
-export default App;
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
